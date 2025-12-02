@@ -238,7 +238,7 @@ jupyter
 ## 📨 Contact
 
 If you have questions about the pipeline or want to replicate the results, reach out via GitHub.  
-**Omar Madjitov** 📧 omar.madjitov@email.com  
+**Omar Madjitov** 📧 omadjitov1@icloud.com  
 🔗 https://www.linkedin.com/in/omar-madjitov-6b3a33234/
 
 ---
