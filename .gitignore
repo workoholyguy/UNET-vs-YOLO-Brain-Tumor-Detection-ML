@@ -20,9 +20,11 @@ experiments/epoch9_preds/
 experiments/fixed_onebox_preds/
 experiments/yolo_run6/
 experiments/yolo_run7/
+experiments/yolo_run8/
 experiments/yolo_run8_test_preds/
 experiments/yolo_run8_val_preds/
 experiments/yolo_seg_fixed/
 experiments/yolo_seg_fixed_val_preds/
 experiments/yolo_seg_fixed_val_preds 2/
 experiments/yolo_seg_run1/
+experiments/*
