@@ -138,16 +138,16 @@ During validation and test evaluation the notebook generates bounding-box overla
 
 ### Selected Visual Evidence
 
-![Segmentation run flooding with 300 detections](experiments/yolo_seg_fixed_val_preds/1_jpg.rf.6a57c3ffb631a0a718fd21e8e05b5a0e.jpg)
+![Segmentation run flooding with 300 detections](./experiments/yolo_seg_fixed_val_preds/1_jpg.rf.6a57c3ffb631a0a718fd21e8e05b5a0e.jpg)
 *Segmentation-era YOLOv8 run predicting dozens of false positives—illustrates why the dataset required a detection framing.*
 
-![YOLOv8 training curves (loss, mAP, precision/recall)](experiments/yolo_run8/results.png)
+![YOLOv8 training curves (loss, mAP, precision/recall)](./experiments/yolo_run8/results.png)
 *Training and validation curves show convergence and the jump in mAP@50 once the detector starts learning meaningful tumor boxes.*
 
-![Validation batch prediction sample](experiments/yolo_run8/val_batch2_pred.jpg)
+![Validation batch prediction sample](./experiments/yolo_run8/val_batch2_pred.jpg)
 *Final YOLOv8 validation pass showing tight tumor localization with confident scores.*
 
-![Validation prediction on previously noisy image](experiments/yolo_run8_val_preds/1_jpg.rf.6a57c3ffb631a0a718fd21e8e05b5a0e.jpg)
+![Validation prediction on previously noisy image](./experiments/yolo_run8_val_preds/1_jpg.rf.6a57c3ffb631a0a718fd21e8e05b5a0e.jpg)
 *Improved single-box prediction for the same slice that produced 300 detections in the segmentation run.*
 
 ---
