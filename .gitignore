@@ -25,7 +25,6 @@ estimate/fixed_onebox_preds
 estimate/raw_iou_results.csv
 estimate/yolo_run6
 estimate/yolo_run7
-estimate/yolo_run8
 estimate/yolo_run8_test_preds
 estimate/yolo_run8_val_preds
 estimate/yolo_seg_fixed
