@@ -6,109 +6,88 @@
 
 ## 📌 Overview
 
-This repository contains my full pipeline for training, validating, and evaluating a **brain-tumor detection model** using **YOLOv8**.  
+This repository documents the full pipeline for converting the course-provided COCO-style annotations into YOLO format, training YOLOv8-s on a single-class tumor detection task, and validating/inferencing with reproducible artifacts.
 
-Originally, the project was defined as a **semantic segmentation** task. However, after inspecting the dataset, I discovered that **all COCO “segmentations” were rectangular polygons**, meaning the dataset **does not contain true pixel-accurate masks**. Every segmentation polygon is just a rectangle describing a tumor region.
+The dataset was originally framed as a semantic segmentation problem, but every “segmentation” mask was a perfect rectangle. UNet and other pixel-wise models saturated at IoU ≈ 0.66 because the labels never contained organic tumor outlines. The correct affordance for the dataset is therefore a **single-class bounding-box detection task**, which is what the current YOLOv8 pipeline implements.
 
-Because of this, UNet (which requires organic, pixel-level masks) plateaued at **IoU ≈ 0.66**. I later confirmed that this was not an architecture failure—**the dataset’s mask geometry made true segmentation impossible**.
-
-To correctly match the dataset’s nature, I redesigned the project as a **single-class bounding-box detection task** and implemented the complete pipeline with **YOLOv8-s**.
-
-This repository includes:
-- Full training pipeline  
-- COCO → YOLO conversion  
-- Raw IoU and pixel-accuracy evaluation  
-- Test-set inference  
-- COCO JSON reconstruction for grading  
-- Visualizations  
-- Fully reproducible Jupyter notebook  
+The repo contains:
+- Data converters (COCO → YOLO; YOLO → COCO)  
+- Training, validation, and test inference scripts  
+- Raw IoU / pixel-accuracy evaluations  
+- Visualization assets for both training curves and predictions  
+- Fully reproducible Jupyter notebook orchestrating every step
 
 ---
 
-## ⚠️ Important Disclaimer — Training Performed on a MacBook (MPS Backend)
+## ⚠️ Hardware & Device Selection
 
-All training and inference steps in this project were executed on:
+Training and inference were run on a **MacBook Pro (M4 Max)** using the **PyTorch MPS backend**. If you run the notebook on Windows or Linux, update the device selection to match the available hardware.
 
-- **MacBook Pro (M4 Max)**  
-- **PyTorch MPS backend**
-
-If you are running this on **Windows or Linux**, MPS will not be available.  
-
-You must switch the device selection logic inside the notebook:
-
-### On my machine:
 ```python
+# On macOS with Apple Silicon
 device = "mps"
 
-On your machine (PC or Linux):
-
-Use CUDA if you have an NVIDIA GPU:
-
+# On NVIDIA-backed Linux/Windows machines
 device = "cuda"
 
-Or CPU:
-
+# On CPU-only systems
 device = "cpu"
+```
 
-Recommended tools for PC users:
-	•	NVIDIA GPU with CUDA 12.x
-	•	PyTorch with CUDA support
-	•	ultralytics==8.3.x
-	•	Python 3.10 – 3.12
+Recommended toolchain for non-MPS environments:
+- NVIDIA GPU with CUDA 12.x
+- PyTorch built with CUDA support (match the CUDA version above)
+- `ultralytics==8.3.x`
+- Python 3.10 – 3.12
 
-If you run into backend errors, this will be the reason.
+---
 
-⸻
+## 🗂️ Repository Layout
 
-🗂️ Project Structure
-
+```
 GROUP PROJECT/
 │
 ├── dataset/
-│   ├── train/
-│   │   ├── images/
-│   │   └── labels/            ← YOLO-formatted labels
-│   ├── valid/
-│   │   ├── images/
-│   │   └── labels/
-│   ├── test/
-│       ├── images/
-│       └── labels/            ← Empty before prediction → filled after YOLO run
-│   └── dataset.yaml
+│   ├── train/                 # COCO annotations + YOLO labels for training
+│   ├── valid/                 # COCO annotations + YOLO labels for validation
+│   ├── test/                  # Test images + model-generated labels
+│   │   └── test_annotations.coco.json  # Reconstructed COCO JSON for grading
+│   └── dataset.yaml           # YOLO config pointing into the dataset folder
 │
 ├── experiments/
-│   ├── yolo_run8/             ← main trained model
-│   ├── yolo_run8_val_preds/   ← validation predictions
-│   └── yolo_run8_test_preds/  ← test predictions
+│   ├── yolo_run8/             # Training logs, curves, and `weights/best.pt`
+│   ├── yolo_run8_val_preds/   # Validation prediction overlays
+│   └── yolo_run8_test_preds/  # Test set predictions from YOLOv8
 │
 ├── src/
-│   └── 05_yolo_pipeline.ipynb ← full notebook (training → evaluation → test)
+│   └── 06_YOLO_Clean_with_txt.ipynb  # Canonical notebook (sanity checks → inference)
+│   └── *.ipynb                  # Supporting exploratory notebooks (UNet, segmentation, etc.)
 │
+├── requirements.txt
 └── README.md
+```
 
+---
 
-⸻
+## 🛠️ Installation
 
-🛠️ Installation
-
-Clone the repository:
-
+```bash
 git clone https://github.com/yourusername/brain-tumor-yolo.git
 cd brain-tumor-yolo
-
-Install dependencies:
-
 pip install -r requirements.txt
+```
 
-If you are on Windows/Linux with an NVIDIA GPU:
+If you are on Windows/Linux with an NVIDIA GPU, install a CUDA-enabled PyTorch wheel before running the notebook:
 
+```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
 
+---
 
-⸻
+## 📄 `dataset.yaml` (auto-generated)
 
-📄 dataset.yaml (autogenerated)
-
+```yaml
 path: ../dataset
 train: train/images
 val: valid/images
@@ -116,76 +95,68 @@ test: test/images
 
 names:
   0: tumor
+```
 
+---
 
-⸻
+## 🚀 Running the Notebook
 
-🚀 How to Run the Notebook
+Launch the notebook interface and execute `src/06_YOLO_Clean_with_txt.ipynb`. The notebook orchestrates every step from data quality checks through COCO/YOLO conversions, training, evaluations, and test-set predictions.
 
-Open Jupyter:
+Pipeline steps (automated inside the notebook):
+1. Dataset sanity checks
+2. COCO → YOLO label conversion
+3. Cleanup of stale `.cache` files
+4. YOLOv8 training (detection task)
+5. Validation predictions
+6. Raw IoU and pixel accuracy computations
+7. Test-set inference
+8. Copying test predictions into `dataset/test/labels/`
+9. YOLO → COCO JSON reconstruction for grading
+10. Sample visualizations (train curves + predictions)
 
-jupyter notebook
+---
 
-Run the notebook:
-
-src/05_yolo_pipeline.ipynb
-
-The notebook executes the entire pipeline in this order:
-	1.	Dataset sanity checks
-	2.	COCO → YOLO label conversion
-	3.	Cache cleanup
-	4.	YOLOv8 training
-	5.	Prediction on validation set
-	6.	Raw IoU computation
-	7.	Pixel accuracy computation
-	8.	Test-set prediction
-	9.	Copy predictions into dataset/test/labels/
-	10.	COCO JSON reconstruction for grading
-	11.	Visualization samples
-
-Everything is reproducible.
-
-⸻
-
-🧠 Model Training Summary
+## 🧠 Model Training Summary
 
 Final validation performance:
 
-Metric	Score
-Mean IoU	0.7299
-Pixel Accuracy	0.9097
-mAP@50	0.905
+| Metric | Threshold | **Achieved** |
+| :----- | :-------- | :----------- |
+| Mean IoU | ≥ 0.70 | **0.7299** |
+| Pixel Accuracy | ≥ 0.75 | **0.9097** |
+| mAP@50 | — | **0.905** |
 
-This exceeds the course’s required thresholds:
+---
 
-Requirement	Threshold	Achieved
-IoU	≥ 0.70	0.7299
-Pixel Accuracy	≥ 0.75	0.9097
+## 📊 Visualizations
 
+During validation and test evaluation the notebook generates bounding-box overlays, precision/recall curves, and qualitative samples. The artifacts land in:
+- `experiments/yolo_run8/` (training curves, confusion matrices, epoch logs)
+- `experiments/yolo_run8_val_preds/` (validation overlay images)
+- `experiments/yolo_run8_test_preds/` (test predictions saved as TXT + images)
 
-⸻
+### Selected Visual Evidence
 
-📊 Visualizations
+![Segmentation run flooding with 300 detections](experiments/yolo_seg_fixed_val_preds/1_jpg.rf.6a57c3ffb631a0a718fd21e8e05b5a0e.jpg)
+*Segmentation-era YOLOv8 run predicting dozens of false positives—illustrates why the dataset required a detection framing.*
 
-During validation and test evaluation, the notebook automatically generates:
-	•	Predicted bounding boxes
-	•	Overlay of predictions vs ground truth
-	•	Random qualitative samples
-	•	YOLO training curves (loss, precision, recall, F1, PR curve)
+![YOLOv8 training curves (loss, mAP, precision/recall)](experiments/yolo_run8/results.png)
+*Training and validation curves show convergence and the jump in mAP@50 once the detector starts learning meaningful tumor boxes.*
 
-Examples are stored in:
+![Validation batch prediction sample](experiments/yolo_run8/val_batch2_pred.jpg)
+*Final YOLOv8 validation pass showing tight tumor localization with confident scores.*
 
-experiments/yolo_run8/
-experiments/yolo_run8_val_preds/
-experiments/yolo_run8_test_preds/
+![Validation prediction on previously noisy image](experiments/yolo_run8_val_preds/1_jpg.rf.6a57c3ffb631a0a718fd21e8e05b5a0e.jpg)
+*Improved single-box prediction for the same slice that produced 300 detections in the segmentation run.*
 
+---
 
-⸻
+## 🧪 Running Inference on the Test Set
 
-🧪 Running Inference on the Test Set
+Execute the YOLO CLI to generate predictions on the blind test split:
 
-YOLO predictions on test images:
-
+```bash
 !yolo predict \
     model=../experiments/yolo_run8/weights/best.pt \
     source=../dataset/test/images \
@@ -194,373 +165,58 @@ YOLO predictions on test images:
     conf=0.40 \
     project=../experiments \
     name=yolo_run8_test_preds
+```
 
-Copy YOLO outputs into the test labels folder:
+Copy the generated TXT labels into the test folder before reconstructing COCO JSON:
 
+```python
 import shutil, os
 
 src = "../experiments/yolo_run8_test_preds/labels"
 dst = "../dataset/test/labels"
-
 for f in os.listdir(src):
     shutil.copy(os.path.join(src, f), os.path.join(dst, f))
-
 print("Test labels copied.")
-
-
-⸻
-
-🧾 Generating COCO JSON for the Test Set
-
-A full conversion script is included in the notebook.
-It reconstructs a valid _annotations.coco.json with fields:
-	•	info
-	•	licenses
-	•	categories
-	•	images
-	•	annotations
-
-All bounding boxes are converted from YOLO normalized coordinates → COCO absolute coordinates.
-
-Output saved to:
-
-dataset/test/_annotations.coco.json
-
-
-⸻
-
-📚 Requirements
-
-requirements.txt:
-
-ultralytics==8.3.233
-torch==2.9.1
-torchvision==0.20.1
-
-numpy
-opencv-python
-matplotlib
-tqdm
-pyyaml
-
-pandas
-scikit-learn
-albumentations
-jupyter
-
-
-⸻
-
-🏁 Final Notes
-
-I wrote this repository so the grader — or any ML engineer evaluating my work — can run it end-to-end with zero ambiguity.
-	•	The notebook is fully reproducible.
-	•	Every step is explained and automated.
-	•	The project uses bounding-box detection because the dataset does not contain real segmentation masks.
-	•	All evaluation metrics match the project’s learning objectives.
-
-If you have a CUDA GPU, training will run much faster than on MPS.
-If you have questions, feel free to reach out through GitHub.
-
-⸻
-
-# 🔧 Troubleshooting & Common Issues
-
-While preparing this project, I encountered several pitfalls related to:
-
-- dataset formatting  
-- COCO vs YOLO label inconsistencies  
-- unsupported augmentations on MPS  
-- cached label mismatches  
-- YOLO predicting hundreds of bounding boxes when `conf=0.0`  
-- proper filtering of predictions  
-
-To help you avoid the same issues, I’ve included a troubleshooting guide below.
-
----
-
-## ❗ Troubleshooting Guide
-
-### 1. **YOLO Predicts Hundreds of Boxes Per Image**
-If you see something like:
-
-300 tumors detected
-
-This simply means you are using:
-
-conf=0.0
-
-YOLO will output **every box before NMS filtering**.
-
-**Fix:**
-Use a realistic confidence threshold:
-```bash
-conf=0.40
-
-
-⸻
-
-2. MPS Not Supported / Crashing
-
-If you are on Windows or Linux, remove:
-
-device = "mps"
-
-Use:
-
-device = "cuda"    # if NVIDIA GPU exists
-
-or:
-
-device = "cpu"
-
-
-⸻
-
-3. YOLO Errors with .cache Files
-
-If your dataset changes, you must clear YOLO’s cache:
-
-import glob, os
-
-for c in glob.glob("../dataset/**/*.cache", recursive=True):
-    os.remove(c)
-
-
-⸻
-
-4. COCO → YOLO Conversion Produces Missing Labels
-
-This occurs when images exist but labels do not.
-
-The notebook automatically removes corrupted labels:
-
-if not exists_image:
-    os.remove(label_file)
-
-
-⸻
-
-5. Raw IoU Returns Zero
-
-If IoU = 0 for all images:
-	•	You may have used segmentation masks instead of bounding boxes.
-	•	You may have compared normalized YOLO coordinates with absolute COCO coordinates.
-	•	You may not have selected the highest-confidence predicted box.
-
-The notebook fixes this by:
-	•	taking the top-1 prediction
-	•	converting YOLO → absolute box coords
-	•	computing IoU safely
-
-⸻
-
-6. Pixel Accuracy > 0.90 Is Expected
-
-Pixel accuracy is almost always high for tumor detection datasets because:
-	•	~95% of pixels are background
-	•	only a small region is tumor
-
-This is normal.Here is a polished, professional, and improved version of your `README.md`. I have restructured it to follow standard engineering documentation practices while preserving your personal narrative and specific course requirements.
-
-You can copy the code block below directly into your `README.md` file.
-
-````markdown
-# 🧠 Brain Tumor Detection — Bounding-Box Segmentation with YOLOv8
-
-**Author:** Omar Madjitov  
-**Course:** CSC 6850 — Machine Learning (Fall 2025)
-
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
-![YOLOv8](https://img.shields.io/badge/YOLO-v8-green)
-
----
-
-## 📌 Overview
-
-This repository contains a complete pipeline for training, validating, and evaluating a **brain-tumor detection model** using **YOLOv8**.
-
-### 🔄 The Pivot: From Segmentation to Detection
-Originally, this project was defined as a **semantic segmentation** task. However, a deep audit of the provided dataset revealed a critical flaw: **all COCO "segmentation" masks were perfect rectangular polygons**. The dataset did not contain organic, pixel-accurate tumor boundaries—only boxes.
-
-Consequently, standard segmentation architectures like **UNet** failed to learn effective boundaries, plateauing at **IoU ≈ 0.66**. To align the modeling approach with the actual geometry of the data, I re-engineered the project as a **single-class bounding-box detection task** using **YOLOv8-s**.
-
-### 📦 Repository Contents
-- ✅ **End-to-End Pipeline:** Data ingestion $\rightarrow$ Training $\rightarrow$ Inference.
-- ✅ **Custom Converters:** COCO JSON $\leftrightarrow$ YOLO TXT format conversion.
-- ✅ **Evaluation:** Raw IoU, Pixel Accuracy, and mAP calculation.
-- ✅ **Reproducibility:** A fully automated Jupyter notebook (`src/05_yolo_pipeline.ipynb`).
-
----
-
-## 🏆 Key Results
-
-The final YOLOv8-s model significantly outperformed the initial UNet attempts and exceeded the course thresholds.
-
-| Metric | Threshold | **Achieved** |
-| :--- | :--- | :--- |
-| **Mean IoU** | $\ge$ 0.70 | **0.7299** |
-| **Pixel Accuracy** | $\ge$ 0.75 | **0.9097** |
-| **mAP@50** | N/A | **0.905** |
-
-> *Note: Pixel accuracy is naturally high (>0.90) in tumor detection because the vast majority of the MRI scan is background.*
-
----
-
-## ⚠️ Hardware Disclaimer (MacBook MPS vs. CUDA)
-
-**This project was developed and executed on a MacBook Pro (M4 Max) using the PyTorch MPS backend.**
-
-### 💻 For Windows / Linux Users
-If you are running this on a PC with an NVIDIA GPU, you **must** update the device selection logic in the notebook.
-
-**In `src/05_yolo_pipeline.ipynb`:**
-
-```python
-# Change this line:
-device = "mps" 
-
-# To this (for NVIDIA GPUs):
-device = "cuda"
-
-# Or this (for CPU only):
-device = "cpu"
-````
-
-**Recommended Environment:**
-
-  * **GPU:** NVIDIA with CUDA 12.x
-  * **Libraries:** `ultralytics==8.3.x`, `torch` (CUDA supported)
-  * **Python:** 3.10 – 3.12
-
------
-
-## 🛠️ Installation
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone [https://github.com/yourusername/brain-tumor-yolo.git](https://github.com/yourusername/brain-tumor-yolo.git)
-    cd brain-tumor-yolo
-    ```
-
-2.  **Install dependencies:**
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-    *(See `requirements.txt` section below for exact versions)*
-
-3.  **(Optional) Install PyTorch with CUDA:**
-    If you are on Windows/Linux, ensure you have the correct PyTorch version:
-
-    ```bash
-    pip install torch torchvision --index-url [https://download.pytorch.org/whl/cu121](https://download.pytorch.org/whl/cu121)
-    ```
-
------
-
-## 🚀 How to Run
-
-The entire workflow is encapsulated in a single Jupyter notebook for maximum reproducibility.
-
-1.  **Launch Jupyter:**
-
-    ```bash
-    jupyter notebook
-    ```
-
-2.  **Open and Run:**
-    Navigate to `src/05_yolo_pipeline.ipynb` and run all cells.
-
-### ⚙️ Pipeline Steps (Automated)
-
-The notebook executes the following sequence:
-
-1.  **Sanity Checks:** Verifies image/label integrity.
-2.  **Conversion:** Transforms COCO JSON annotations to YOLO format.
-3.  **Cleanup:** Removes old `.cache` files to prevent data leakage.
-4.  **Training:** Fine-tunes `yolov8s.pt` for 30 epochs.
-5.  **Validation:** Generates predictions on the validation set.
-6.  **Evaluation:** Computes raw IoU and Pixel Accuracy.
-7.  **Testing:** Runs inference on the blind test set.
-8.  **Reconstruction:** Converts YOLO predictions back to COCO JSON for grading.
-
------
-
-## 🗂️ Project Structure
-
-```text
-GROUP PROJECT/
-│
-├── dataset/
-│   ├── train/                 # Training images & labels
-│   ├── valid/                 # Validation images & labels
-│   ├── test/                  # Test images (labels generated by model)
-│   └── dataset.yaml           # Auto-generated YOLO config
-│
-├── experiments/
-│   ├── yolo_run8/             # Trained model weights & logs
-│   ├── yolo_run8_val_preds/   # Validation set outputs
-│   └── yolo_run8_test_preds/  # Test set outputs
-│
-├── src/
-│   └── 05_yolo_pipeline.ipynb # MAIN NOTEBOOK
-│
-└── README.md
 ```
 
------
+---
 
-## 🔧 Troubleshooting Guide
+## 🧾 Generating COCO JSON for the Test Set
 
-During development, I encountered specific issues related to dataset formatting and backend compatibility. Here is how to resolve them:
+The notebook reconstructs a COCO-format JSON (`dataset/test/test_annotations.coco.json`) from the YOLO predictions so graders can evaluate the model in the original annotation schema. All boxes are converted from normalized YOLO coordinates to absolute pixel values, and the reconstruction adds the required `info`, `licenses`, `categories`, `images`, and `annotations` sections.
 
-### 1\. YOLO Predicts Hundreds of Boxes (`300+ tumors detected`)
+---
 
-**Cause:** This happens if you set `conf=0.0`. YOLO outputs every candidate box before Non-Maximum Suppression (NMS).
-**Fix:** Use a realistic confidence threshold (e.g., `conf=0.40`).
+## ⚙️ Troubleshooting
 
-### 2\. Backend Errors / Crashing
+1. **YOLO predicts hundreds of boxes.** Likely `conf=0.0`—raise the confidence threshold (recommend `conf=0.40`).
+2. **Backend errors when running on Windows/Linux.** Remove `device = "mps"` and switch to `"cuda"` or `"cpu"` depending on hardware.
+3. **YOLO errors referencing `.cache` files.** Delete cached files with `glob.glob("../dataset/**/*.cache", recursive=True)` before retraining.
+4. **Missing labels after conversion.** Some COCO entries lacked an image—labels without matching images are dropped (`os.remove(label_file)` when `exists_image` is false).
+5. **Raw IoU returns zero.** Ensure YOLO predictions are denormalized before comparing to COCO boxes; the notebook takes the top-1 prediction per image and converts to absolute pixels.
+6. **Pixel accuracy is consistently > 0.90.** This is expected because >95% of each scan is background.
 
-**Cause:** Trying to use `device='mps'` on a Windows/Linux machine.
-**Fix:** Switch to `device='cuda'` or `device='cpu'` as described in the Hardware Disclaimer.
-
-### 3\. Missing Labels after Conversion
-
-**Cause:** Some images in the source dataset may not have corresponding annotations.
-**Fix:** The notebook includes a script that automatically aligns images and labels:
-
-```python
-if not exists_image:
-    os.remove(label_file)
-```
-
-### 4\. Raw IoU Returns Zero
-
-**Cause:** Mismatch between normalized YOLO coordinates (0-1) and absolute COCO coordinates (pixels).
-**Fix:** The notebook handles coordinate denormalization automatically before computing metrics.
-
------
+---
 
 ## 📦 Deliverables
 
-Upon successful execution, the following files are generated:
+- `experiments/yolo_run8/weights/best.pt` — Final YOLOv8-s weights.
+- `experiments/raw_iou_results.csv` — Raw IoU metrics produced during validation.
+- `dataset/test/test_annotations.coco.json` — Reconstructed COCO JSON for grading.
+- `experiments/yolo_run8/results.png` — Training curves showing loss/precision/recall/mAP progression.
+- `experiments/yolo_run8_val_preds/` and `experiments/yolo_run8_test_preds/` — Visual validation/test overlays and TXT prediction outputs.
 
-| File | Description |
-| :--- | :--- |
-| `experiments/yolo_run8/weights/best.pt` | The final trained model weights. |
-| `val_iou_pixel_accuracy.json` | Calculated performance metrics. |
-| `dataset/test/_annotations.coco.json` | Reconstructed COCO JSON for grading/submission. |
-| `experiments/yolo_run8_test_visuals/` | Overlay visualizations of model predictions. |
+---
 
------
+## 🔁 Reproducing Training from Scratch
+
+1. Launch `src/06_YOLO_Clean_with_txt.ipynb` and rerun the cells responsible for dataset checks, COCO → YOLO conversion, and cleanup of `.cache` files.
+2. Train YOLOv8-s with `model.train(...)` using the dataset configuration shown above (30 epochs, `imgsz=640`, `batch=8`, `device=device`).
+3. Once training completes, the notebook auto-generates validation/test predictions, copies test TXT labels into `dataset/test/labels/`, and rebuilds the COCO JSON file.
+
+---
 
 ## 📚 Requirements
-
-**`requirements.txt`**
 
 ```text
 ultralytics==8.3.233
@@ -577,159 +233,14 @@ albumentations
 jupyter
 ```
 
------
+---
 
 ## 📨 Contact
 
-If you have questions about the pipeline or the dataset analysis, please feel free to reach out.
-
+If you have questions about the pipeline or want to replicate the results, reach out via GitHub.  
 **Omar Madjitov** 📧 omar.madjitov@email.com  
-🔗 [LinkedIn Profile](https://www.linkedin.com/in/omar-madjitov-6b3a33234/)
-
------
-
-*Thank you for reviewing my work\!*
-
-```
-```
-
-⸻
-
-📤 How to Reproduce Training from Scratch
-
-If you want to fully retrain the model:
-
-Step 1 — Convert COCO → YOLO
-
-Run the first half of the notebook:
-	•	sanity check images
-	•	convert annotations
-	•	clean corrupted labels
-	•	delete .cache files
-
-Step 2 — Train YOLOv8
-
-model = YOLO("yolov8s.pt")
-
-model.train(
-    data="../dataset/dataset.yaml",
-    epochs=30,
-    imgsz=640,
-    batch=8,
-    device=device,
-    task="detect",
-    project="../experiments",
-    name="yolo_run8",
-    save=True,
-    save_period=1,
-    fliplr=0.5,
-    flipud=0.0,
-    augment=False
-)
-
-Step 3 — Save Predictions for Validation and Test
-
-The notebook includes:
-
-!yolo predict ...
-
-
-⸻
-
-📦 Deliverables Generated
-
-After running the notebook, the following deliverables are created automatically:
-
-✔ best.pt
-
-Final YOLO weights.
-
-✔ val_iou_pixel_accuracy.json
-
-Computed IoU + pixel accuracy for the validation set.
-
-✔ _annotations.coco.json (Test Set)
-
-Reconstructed COCO JSON for grading.
-
-✔ 5 Random Visualization Overlays
-
-Stored in:
-
-experiments/yolo_run8_test_visuals/
-
-✔ YOLO Metrics
-
-Plot files:
-	•	precision curve
-	•	recall curve
-	•	PR curve
-	•	confusion matrix
-	•	training loss curves
-
-⸻
-
-📑 Academic Integrity & Project Notes
-
-I include this section so the grader understands my research process.
-
-✔ Why UNet Didn’t Work
-
-UNet expects organic, pixel-accurate segmentation masks.
-But this dataset contains only rectangular polygons.
-UNet cannot infer tumor shape from rectangular masks; the model saturates early.
-
-✔ Why YOLO Works Better
-
-YOLO is designed for bounding box detection.
-Bounding boxes are exactly what the dataset contains.
-Therefore, YOLO matches the dataset’s geometry perfectly.
-
-✔ Final Performance
-
-YOLO produced:
-	•	IoU: 0.7299
-	•	Pixel Accuracy: 0.9097
-	•	mAP@50: 0.905
-
-These exceed the required thresholds for the course.
-
-⸻
-
-🧭 Summary for GitHub Readers
-
-This repository demonstrates:
-
-✔ proper dataset auditing
-✔ custom COCO → YOLO conversion
-✔ robust training methodology
-✔ reproducible evaluation
-✔ bounding-box based reconstruction of COCO labels
-✔ high-quality visualizations
-✔ clean project organization
-✔ clear delivery pipeline
-
-It reflects my ability to:
-	•	analyze dataset structure
-	•	design the correct ML task
-	•	build pipelines end-to-end
-	•	evaluate models correctly
-	•	document work for both graders and engineers
-
-⸻
-
-📨 Contact
-
-If you need help running the project or you want to discuss the pipeline, you can reach me anytime:
-
-Omar Madjitov
-📧 omar.madjitov@email.com
 🔗 https://www.linkedin.com/in/omar-madjitov-6b3a33234/
 
-⸻
+---
 
 Thank you for reviewing my work!
-
-
-
-
