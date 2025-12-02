@@ -361,7 +361,237 @@ Pixel accuracy is almost always high for tumor detection datasets because:
 	•	~95% of pixels are background
 	•	only a small region is tumor
 
-This is normal.
+This is normal.Here is a polished, professional, and improved version of your `README.md`. I have restructured it to follow standard engineering documentation practices while preserving your personal narrative and specific course requirements.
+
+You can copy the code block below directly into your `README.md` file.
+
+````markdown
+# 🧠 Brain Tumor Detection — Bounding-Box Segmentation with YOLOv8
+
+**Author:** Omar Madjitov  
+**Course:** CSC 6850 — Machine Learning (Fall 2025)
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
+![YOLOv8](https://img.shields.io/badge/YOLO-v8-green)
+
+---
+
+## 📌 Overview
+
+This repository contains a complete pipeline for training, validating, and evaluating a **brain-tumor detection model** using **YOLOv8**.
+
+### 🔄 The Pivot: From Segmentation to Detection
+Originally, this project was defined as a **semantic segmentation** task. However, a deep audit of the provided dataset revealed a critical flaw: **all COCO "segmentation" masks were perfect rectangular polygons**. The dataset did not contain organic, pixel-accurate tumor boundaries—only boxes.
+
+Consequently, standard segmentation architectures like **UNet** failed to learn effective boundaries, plateauing at **IoU ≈ 0.66**. To align the modeling approach with the actual geometry of the data, I re-engineered the project as a **single-class bounding-box detection task** using **YOLOv8-s**.
+
+### 📦 Repository Contents
+- ✅ **End-to-End Pipeline:** Data ingestion $\rightarrow$ Training $\rightarrow$ Inference.
+- ✅ **Custom Converters:** COCO JSON $\leftrightarrow$ YOLO TXT format conversion.
+- ✅ **Evaluation:** Raw IoU, Pixel Accuracy, and mAP calculation.
+- ✅ **Reproducibility:** A fully automated Jupyter notebook (`src/05_yolo_pipeline.ipynb`).
+
+---
+
+## 🏆 Key Results
+
+The final YOLOv8-s model significantly outperformed the initial UNet attempts and exceeded the course thresholds.
+
+| Metric | Threshold | **Achieved** |
+| :--- | :--- | :--- |
+| **Mean IoU** | $\ge$ 0.70 | **0.7299** |
+| **Pixel Accuracy** | $\ge$ 0.75 | **0.9097** |
+| **mAP@50** | N/A | **0.905** |
+
+> *Note: Pixel accuracy is naturally high (>0.90) in tumor detection because the vast majority of the MRI scan is background.*
+
+---
+
+## ⚠️ Hardware Disclaimer (MacBook MPS vs. CUDA)
+
+**This project was developed and executed on a MacBook Pro (M4 Max) using the PyTorch MPS backend.**
+
+### 💻 For Windows / Linux Users
+If you are running this on a PC with an NVIDIA GPU, you **must** update the device selection logic in the notebook.
+
+**In `src/05_yolo_pipeline.ipynb`:**
+
+```python
+# Change this line:
+device = "mps" 
+
+# To this (for NVIDIA GPUs):
+device = "cuda"
+
+# Or this (for CPU only):
+device = "cpu"
+````
+
+**Recommended Environment:**
+
+  * **GPU:** NVIDIA with CUDA 12.x
+  * **Libraries:** `ultralytics==8.3.x`, `torch` (CUDA supported)
+  * **Python:** 3.10 – 3.12
+
+-----
+
+## 🛠️ Installation
+
+1.  **Clone the repository:**
+
+    ```bash
+    git clone [https://github.com/yourusername/brain-tumor-yolo.git](https://github.com/yourusername/brain-tumor-yolo.git)
+    cd brain-tumor-yolo
+    ```
+
+2.  **Install dependencies:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+    *(See `requirements.txt` section below for exact versions)*
+
+3.  **(Optional) Install PyTorch with CUDA:**
+    If you are on Windows/Linux, ensure you have the correct PyTorch version:
+
+    ```bash
+    pip install torch torchvision --index-url [https://download.pytorch.org/whl/cu121](https://download.pytorch.org/whl/cu121)
+    ```
+
+-----
+
+## 🚀 How to Run
+
+The entire workflow is encapsulated in a single Jupyter notebook for maximum reproducibility.
+
+1.  **Launch Jupyter:**
+
+    ```bash
+    jupyter notebook
+    ```
+
+2.  **Open and Run:**
+    Navigate to `src/05_yolo_pipeline.ipynb` and run all cells.
+
+### ⚙️ Pipeline Steps (Automated)
+
+The notebook executes the following sequence:
+
+1.  **Sanity Checks:** Verifies image/label integrity.
+2.  **Conversion:** Transforms COCO JSON annotations to YOLO format.
+3.  **Cleanup:** Removes old `.cache` files to prevent data leakage.
+4.  **Training:** Fine-tunes `yolov8s.pt` for 30 epochs.
+5.  **Validation:** Generates predictions on the validation set.
+6.  **Evaluation:** Computes raw IoU and Pixel Accuracy.
+7.  **Testing:** Runs inference on the blind test set.
+8.  **Reconstruction:** Converts YOLO predictions back to COCO JSON for grading.
+
+-----
+
+## 🗂️ Project Structure
+
+```text
+GROUP PROJECT/
+│
+├── dataset/
+│   ├── train/                 # Training images & labels
+│   ├── valid/                 # Validation images & labels
+│   ├── test/                  # Test images (labels generated by model)
+│   └── dataset.yaml           # Auto-generated YOLO config
+│
+├── experiments/
+│   ├── yolo_run8/             # Trained model weights & logs
+│   ├── yolo_run8_val_preds/   # Validation set outputs
+│   └── yolo_run8_test_preds/  # Test set outputs
+│
+├── src/
+│   └── 05_yolo_pipeline.ipynb # MAIN NOTEBOOK
+│
+└── README.md
+```
+
+-----
+
+## 🔧 Troubleshooting Guide
+
+During development, I encountered specific issues related to dataset formatting and backend compatibility. Here is how to resolve them:
+
+### 1\. YOLO Predicts Hundreds of Boxes (`300+ tumors detected`)
+
+**Cause:** This happens if you set `conf=0.0`. YOLO outputs every candidate box before Non-Maximum Suppression (NMS).
+**Fix:** Use a realistic confidence threshold (e.g., `conf=0.40`).
+
+### 2\. Backend Errors / Crashing
+
+**Cause:** Trying to use `device='mps'` on a Windows/Linux machine.
+**Fix:** Switch to `device='cuda'` or `device='cpu'` as described in the Hardware Disclaimer.
+
+### 3\. Missing Labels after Conversion
+
+**Cause:** Some images in the source dataset may not have corresponding annotations.
+**Fix:** The notebook includes a script that automatically aligns images and labels:
+
+```python
+if not exists_image:
+    os.remove(label_file)
+```
+
+### 4\. Raw IoU Returns Zero
+
+**Cause:** Mismatch between normalized YOLO coordinates (0-1) and absolute COCO coordinates (pixels).
+**Fix:** The notebook handles coordinate denormalization automatically before computing metrics.
+
+-----
+
+## 📦 Deliverables
+
+Upon successful execution, the following files are generated:
+
+| File | Description |
+| :--- | :--- |
+| `experiments/yolo_run8/weights/best.pt` | The final trained model weights. |
+| `val_iou_pixel_accuracy.json` | Calculated performance metrics. |
+| `dataset/test/_annotations.coco.json` | Reconstructed COCO JSON for grading/submission. |
+| `experiments/yolo_run8_test_visuals/` | Overlay visualizations of model predictions. |
+
+-----
+
+## 📚 Requirements
+
+**`requirements.txt`**
+
+```text
+ultralytics==8.3.233
+torch==2.9.1
+torchvision==0.20.1
+numpy
+opencv-python
+matplotlib
+tqdm
+pyyaml
+pandas
+scikit-learn
+albumentations
+jupyter
+```
+
+-----
+
+## 📨 Contact
+
+If you have questions about the pipeline or the dataset analysis, please feel free to reach out.
+
+**Omar Madjitov** 📧 omar.madjitov@email.com  
+🔗 [LinkedIn Profile](https://www.linkedin.com/in/omar-madjitov-6b3a33234/)
+
+-----
+
+*Thank you for reviewing my work\!*
+
+```
+```
 
 ⸻
 
