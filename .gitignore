@@ -2,7 +2,5 @@
 *.pdf
 *.doc
 *.docx
-experiments/
-./experiments
-experiments
+experiments/*
 Submission
