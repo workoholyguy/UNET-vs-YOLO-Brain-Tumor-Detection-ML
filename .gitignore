@@ -2,7 +2,6 @@
 *.pdf
 *.doc
 *.docx
-experiments/*
 Submission
 estimate/best_model_AB.pth
 estimate/best_model_mps.pth
